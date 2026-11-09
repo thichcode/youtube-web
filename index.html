@@ -147,6 +147,10 @@
 
     <!-- Right Actions / Mode toggle -->
     <div class="flex items-center gap-2">
+      <button id="bgModeBtn" title="Chế độ chạy nền: phát tiếp khi tab ẩn / màn hình khóa" class="px-3 py-1.5 rounded-lg bg-surface-card hover:bg-surface-elevated border border-surface-border text-xs font-medium text-slate-300 flex items-center gap-2 transition-all">
+        <i data-lucide="picture-in-picture-2" class="w-4 h-4 text-brand-400"></i>
+        <span id="bgModeLabel" class="hidden sm:inline">Chạy nền</span>
+      </button>
       <button id="toggleViewModeBtn" class="px-3 py-1.5 rounded-lg bg-surface-card hover:bg-surface-elevated border border-surface-border text-xs font-medium text-slate-300 flex items-center gap-2 transition-all">
         <i data-lucide="monitor-play" class="w-4 h-4 text-brand-400"></i>
         <span id="viewModeLabel" class="hidden sm:inline">Xem Video</span>
@@ -279,7 +283,7 @@
     
     <!-- Left: Now Playing Mini Details -->
     <div class="flex items-center gap-3 w-1/4 min-w-[180px]">
-      <div class="w-13 h-13 w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-surface-elevated border border-white/5 relative group cursor-pointer" id="miniThumbClick">
+      <div class="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-surface-elevated border border-white/5 relative group cursor-pointer" id="miniThumbClick">
         <img id="barThumbnail" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=120" alt="Track thumbnail" class="w-full h-full object-cover">
         <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
           <i data-lucide="maximize-2" class="w-4 h-4 text-white"></i>
@@ -460,6 +464,8 @@
     const minimizeVideoBtn = document.getElementById('minimizeVideoBtn');
     const miniThumbClick = document.getElementById('miniThumbClick');
     const waveVisualizer = document.getElementById('waveVisualizer');
+    const bgModeBtn = document.getElementById('bgModeBtn');
+    const bgModeLabel = document.getElementById('bgModeLabel');
 
     // Sidebar drawer for responsive devices
     const queueSidebar = document.getElementById('queueSidebar');
@@ -556,6 +562,7 @@
         startTrackingProgress();
         startVisualizerAnimation();
         playerStateText.textContent = 'Đang phát nhạc';
+        if (bgMode) syncMediaSessionState('playing');
         // Auto update video title if available from YouTube player
         const videoData = ytPlayer.getVideoData();
         if (videoData && videoData.title && playlist[currentIndex].title.startsWith('YouTube Song')) {
@@ -569,6 +576,7 @@
         updatePlayPauseIcon(false);
         stopVisualizerAnimation();
         playerStateText.textContent = 'Tạm dừng';
+        if (bgMode) syncMediaSessionState('paused');
       } else if (event.data === YT.PlayerState.BUFFERING) {
         playerStateText.textContent = 'Đang tải dữ liệu...';
       } else if (event.data === YT.PlayerState.ENDED) {
@@ -783,6 +791,7 @@
       barThumbnail.src = track.thumbnail || `https://img.youtube.com/vi/${track.id}/hqdefault.jpg`;
 
       queueCountIndicator.textContent = `${playlist.length} bài trong danh sách`;
+      if (bgMode) updateMediaSessionMetadata();
     }
 
     function updatePlayPauseIcon(playing) {
@@ -852,6 +861,91 @@
     toggleViewModeBtn.addEventListener('click', () => setVideoMode(!isVideoMode));
     minimizeVideoBtn.addEventListener('click', () => setVideoMode(false));
     miniThumbClick.addEventListener('click', () => setVideoMode(true));
+
+    /* ==========================================================
+       6b. Background Play Mode (Media Session + visibility handling)
+       ========================================================== */
+    let bgMode = localStorage.getItem('lumina_bgmode') === '1';
+
+    function updateMediaSessionMetadata() {
+      if (!('mediaSession' in navigator)) return;
+      const track = playlist[currentIndex];
+      if (!track) return;
+      const art = track.thumbnail || `https://img.youtube.com/vi/${track.id}/hqdefault.jpg`;
+      try {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: track.title,
+          artist: track.artist || 'YouTube',
+          album: 'Lumina Music',
+          artwork: [
+            { src: art, sizes: '512x512', type: 'image/jpeg' },
+            { src: art, sizes: '256x256', type: 'image/jpeg' },
+          ],
+        });
+      } catch (e) { /* bỏ qua nếu trình duyệt không hỗ trợ */ }
+    }
+
+    function syncMediaSessionState(state) {
+      if (!('mediaSession' in navigator)) return;
+      try { navigator.mediaSession.playbackState = state; } catch (e) {}
+    }
+
+    function setupMediaSession() {
+      if (!('mediaSession' in navigator)) {
+        showToast('Trình duyệt không hỗ trợ Media Session — vẫn phát nền cơ bản');
+        return;
+      }
+      updateMediaSessionMetadata();
+      navigator.mediaSession.setActionHandler('play', () => { if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo(); });
+      navigator.mediaSession.setActionHandler('pause', () => { if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); });
+      navigator.mediaSession.setActionHandler('previoustrack', () => playPrevious());
+      navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (ytPlayer && ytPlayer.seekTo && details.seekTime != null) ytPlayer.seekTo(details.seekTime, true);
+      });
+      syncMediaSessionState(isPlaying ? 'playing' : 'paused');
+    }
+
+    function setBackgroundMode(enable) {
+      bgMode = enable;
+      localStorage.setItem('lumina_bgmode', enable ? '1' : '0');
+      if (enable) {
+        bgModeBtn.classList.add('bg-brand-500/20', 'border-brand-500/40', 'text-brand-400');
+        bgModeBtn.classList.remove('text-slate-300');
+        bgModeLabel.textContent = 'Đang chạy nền';
+        setupMediaSession();
+        showToast('Đã bật chế độ chạy nền');
+      } else {
+        bgModeBtn.classList.remove('bg-brand-500/20', 'border-brand-500/40', 'text-brand-400');
+        bgModeBtn.classList.add('text-slate-300');
+        bgModeLabel.textContent = 'Chạy nền';
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.metadata = null;
+          syncMediaSessionState('none');
+        }
+        showToast('Đã tắt chế độ chạy nền');
+      }
+      lucide.createIcons();
+    }
+
+    // Khi quay lại tab sau khi ẩn: nếu đang phát mà bị dừng thì phát lại
+    document.addEventListener('visibilitychange', () => {
+      if (!bgMode) return;
+      if (document.hidden) return;
+      if (ytPlayer && ytPlayer.getPlayerState && ytPlayer.getPlayerState() === 2) {
+        ytPlayer.playVideo();
+      }
+      if (isPlaying) setupMediaSession();
+    });
+
+    bgModeBtn.addEventListener('click', () => setBackgroundMode(!bgMode));
+
+    // Khôi phục trạng thái đã lưu khi tải trang
+    if (bgMode) {
+      bgModeBtn.classList.add('bg-brand-500/20', 'border-brand-500/40', 'text-brand-400');
+      bgModeBtn.classList.remove('text-slate-300');
+      bgModeLabel.textContent = 'Đang chạy nền';
+    }
 
     /* ==========================================================
        7. Playlist Rendering and Queue Management
