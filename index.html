@@ -111,7 +111,7 @@
     }
   </style>
 </head>
-<body class="bg-[#0a0a0e] text-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col select-none">
+<body class="bg-[#0a0a0e] text-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col select-none" style="height: 100dvh;">
 
   <!-- Top Navigation Header -->
   <header class="h-16 border-b border-surface-border px-4 lg:px-6 flex items-center justify-between glass-panel z-20 shrink-0">
@@ -121,13 +121,13 @@
         <i data-lucide="music-2" class="w-5 h-5 text-white"></i>
       </div>
       <div>
-        <span class="font-display font-bold text-lg tracking-wide bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">Lumina Music</span>
-        <span class="text-[10px] block text-brand-400 font-semibold uppercase tracking-wider -mt-1">YouTube Audio & Video</span>
+        <span class="hidden sm:block font-display font-bold text-lg tracking-wide bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">Lumina Music</span>
+        <span class="hidden sm:block text-[10px] text-brand-400 font-semibold uppercase tracking-wider -mt-1">YouTube Audio & Video</span>
       </div>
     </div>
 
     <!-- Quick Add Song Form -->
-    <div class="flex-1 max-w-xl mx-4">
+    <div class="flex-1 min-w-0 max-w-xl mx-2 sm:mx-4">
       <form id="addSongForm" class="relative flex items-center">
         <i data-lucide="plus-circle" class="absolute left-3.5 w-4 h-4 text-slate-400"></i>
         <input 
@@ -171,12 +171,12 @@
   <main class="flex-1 flex overflow-hidden relative">
 
     <!-- Center Stage: Player & Visualizer -->
-    <section class="flex-1 flex flex-col justify-between p-4 lg:p-8 overflow-y-auto relative">
+    <section class="flex-1 min-h-0 flex flex-col justify-between p-3 sm:p-4 lg:p-8 overflow-y-auto relative">
       <!-- Glow ambient background -->
       <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-500/10 rounded-full blur-[120px] pointer-events-none"></div>
 
       <!-- Main Playback Presentation -->
-      <div class="w-full max-w-4xl mx-auto flex-1 flex flex-col items-center justify-center my-auto z-10">
+      <div class="w-full max-w-4xl mx-auto flex-1 min-h-0 flex flex-col items-center justify-center my-auto z-10">
 
         <!-- Mode A: Audio Art + Visualizer Mode (Default) -->
         <div id="visualizerContainer" class="flex flex-col items-center w-full max-w-md transition-all duration-500">
@@ -184,7 +184,7 @@
           <div class="relative group my-4">
             <div id="glowBackdrop" class="absolute inset-0 bg-brand-500/20 rounded-full blur-2xl group-hover:bg-brand-500/30 transition-all duration-700 animate-pulse-glow"></div>
             
-            <div class="relative w-64 h-64 sm:w-72 sm:h-72 rounded-3xl overflow-hidden shadow-2xl border border-white/10 p-2 bg-surface-card">
+            <div class="relative w-40 h-40 sm:w-64 sm:h-64 lg:w-72 lg:h-72 rounded-3xl overflow-hidden shadow-2xl border border-white/10 p-2 bg-surface-card">
               <img 
                 id="currentThumbnail" 
                 src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80" 
@@ -200,7 +200,7 @@
           </div>
 
           <!-- Dynamic Soundwave Visualizer Bars -->
-          <div class="w-full h-16 flex items-end justify-center gap-1.5 px-4 my-2" id="waveVisualizer">
+          <div class="w-full h-12 sm:h-16 flex items-end justify-center gap-1.5 px-4 my-2" id="waveVisualizer">
             <!-- Dynamically generated visual bars -->
           </div>
 
@@ -279,17 +279,17 @@
   </main>
 
   <!-- Bottom Player Bar (Persistent) -->
-  <footer class="h-24 bg-surface-card/95 border-t border-surface-border px-4 lg:px-8 flex items-center justify-between glass-panel z-40 shrink-0">
+  <footer class="h-20 sm:h-24 bg-surface-card/95 border-t border-surface-border px-2 sm:px-4 lg:px-8 flex items-center justify-between glass-panel z-40 shrink-0">
     
     <!-- Left: Now Playing Mini Details -->
-    <div class="flex items-center gap-3 w-1/4 min-w-[180px]">
-      <div class="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-surface-elevated border border-white/5 relative group cursor-pointer" id="miniThumbClick">
+    <div class="flex items-center gap-2 sm:gap-3 w-1/4 min-w-0">
+      <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden shrink-0 bg-surface-elevated border border-white/5 relative group cursor-pointer" id="miniThumbClick">
         <img id="barThumbnail" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=120" alt="Track thumbnail" class="w-full h-full object-cover">
         <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
           <i data-lucide="maximize-2" class="w-4 h-4 text-white"></i>
         </div>
       </div>
-      <div class="min-w-0 pr-2">
+      <div class="min-w-0 pr-2 hidden sm:block">
         <h4 id="barTitle" class="text-sm font-semibold text-white truncate hover:underline cursor-pointer">Đang tải bài hát...</h4>
         <p id="barArtist" class="text-xs text-slate-400 truncate">Vui lòng chọn bài</p>
       </div>
@@ -299,16 +299,16 @@
     </div>
 
     <!-- Center: Playback Controls & Timeline -->
-    <div class="flex flex-col items-center gap-1.5 w-2/4 max-w-xl">
+    <div class="flex flex-col items-center gap-1.5 flex-1 sm:w-2/4 sm:flex-none max-w-xl">
       <!-- Buttons -->
-      <div class="flex items-center gap-3 sm:gap-5">
+      <div class="flex items-center gap-2 sm:gap-5">
         <button id="shuffleBtn" title="Phát ngẫu nhiên" class="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg active:scale-95">
           <i data-lucide="shuffle" class="w-4 h-4"></i>
         </button>
         <button id="prevBtn" title="Bài trước" class="text-slate-200 hover:text-white transition-colors p-1.5 rounded-lg active:scale-95">
           <i data-lucide="skip-back" class="w-5 h-5 fill-current"></i>
         </button>
-        <button id="playPauseBtn" title="Phát / Dừng" class="w-11 h-11 rounded-full bg-white text-black hover:bg-brand-500 hover:text-white flex items-center justify-center transition-all duration-200 shadow-lg shadow-white/10 active:scale-95">
+        <button id="playPauseBtn" title="Phát / Dừng" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white text-black hover:bg-brand-500 hover:text-white flex items-center justify-center transition-all duration-200 shadow-lg shadow-white/10 active:scale-95">
           <i id="playIcon" data-lucide="play" class="w-5 h-5 fill-current ml-0.5"></i>
         </button>
         <button id="nextBtn" title="Bài tiếp theo" class="text-slate-200 hover:text-white transition-colors p-1.5 rounded-lg active:scale-95">
@@ -340,11 +340,11 @@
     </div>
 
     <!-- Right: Volume & Options -->
-    <div class="flex items-center justify-end gap-3 w-1/4 min-w-[150px]">
+    <div class="flex items-center justify-end gap-2 sm:gap-3 w-1/4 min-w-0">
       <button id="muteBtn" class="text-slate-400 hover:text-white transition-colors p-1.5">
         <i id="volIcon" data-lucide="volume-2" class="w-4 h-4"></i>
       </button>
-      <div class="w-20 sm:w-28 relative flex items-center">
+      <div class="w-12 sm:w-28 relative flex items-center">
         <input 
           type="range" 
           id="volumeBar" 
