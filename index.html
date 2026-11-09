@@ -147,6 +147,10 @@
 
     <!-- Right Actions / Mode toggle -->
     <div class="flex items-center gap-2">
+      <button id="openYtBtn" title="Mở bài trong YouTube (nghe nền được với YouTube Premium)" class="px-3 py-1.5 rounded-lg bg-surface-card hover:bg-surface-elevated border border-surface-border text-xs font-medium text-slate-300 flex items-center gap-2 transition-all">
+        <i data-lucide="external-link" class="w-4 h-4 text-brand-400"></i>
+        <span class="hidden sm:inline">Mở YouTube</span>
+      </button>
       <button id="bgModeBtn" title="Chế độ chạy nền: phát tiếp khi tab ẩn / màn hình khóa" class="px-3 py-1.5 rounded-lg bg-surface-card hover:bg-surface-elevated border border-surface-border text-xs font-medium text-slate-300 flex items-center gap-2 transition-all">
         <i data-lucide="picture-in-picture-2" class="w-4 h-4 text-brand-400"></i>
         <span id="bgModeLabel" class="hidden sm:inline">Chạy nền</span>
@@ -466,6 +470,7 @@
     const waveVisualizer = document.getElementById('waveVisualizer');
     const bgModeBtn = document.getElementById('bgModeBtn');
     const bgModeLabel = document.getElementById('bgModeLabel');
+    const openYtBtn = document.getElementById('openYtBtn');
 
     // Sidebar drawer for responsive devices
     const queueSidebar = document.getElementById('queueSidebar');
@@ -914,7 +919,12 @@
         bgModeBtn.classList.remove('text-slate-300');
         bgModeLabel.textContent = 'Đang chạy nền';
         setupMediaSession();
-        showToast('Đã bật chế độ chạy nền');
+        const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (isIOS) {
+          showToast('iOS Safari: YouTube embed không chạy nền được — hãy dùng YouTube app (Premium)');
+        } else {
+          showToast('Đã bật chế độ chạy nền');
+        }
       } else {
         bgModeBtn.classList.remove('bg-brand-500/20', 'border-brand-500/40', 'text-brand-400');
         bgModeBtn.classList.add('text-slate-300');
@@ -939,6 +949,14 @@
     });
 
     bgModeBtn.addEventListener('click', () => setBackgroundMode(!bgMode));
+
+    // Mở bài hiện tại trong YouTube (app/website) — hỗ trợ nghe nền với Premium
+    function openInYouTube() {
+      const track = playlist[currentIndex];
+      if (!track) return;
+      window.open(`https://www.youtube.com/watch?v=${track.id}`, '_blank', 'noopener');
+    }
+    openYtBtn.addEventListener('click', openInYouTube);
 
     // Khôi phục trạng thái đã lưu khi tải trang
     if (bgMode) {
