@@ -664,7 +664,10 @@
         startTrackingProgress();
         startVisualizerAnimation();
         playerStateText.textContent = 'Đang phát nhạc';
-        if (bgMode) syncMediaSessionState('playing');
+        if (bgMode) {
+          syncMediaSessionState('playing');
+          startSilentAudio();
+        }
         // Auto update video title if available from YouTube player
         const videoData = ytPlayer.getVideoData();
         if (videoData && videoData.title && (playlist[currentIndex].title.startsWith('YouTube Song') || playlist[currentIndex].title.startsWith('Đang lấy tên'))) {
@@ -679,7 +682,10 @@
         updatePlayPauseIcon(false);
         stopVisualizerAnimation();
         playerStateText.textContent = 'Tạm dừng';
-        if (bgMode) syncMediaSessionState('paused');
+        if (bgMode) {
+          syncMediaSessionState('paused');
+          stopSilentAudio();
+        }
       } else if (event.data === YT.PlayerState.BUFFERING) {
         playerStateText.textContent = 'Đang tải dữ liệu...';
       } else if (event.data === YT.PlayerState.ENDED) {
@@ -966,9 +972,39 @@
     miniThumbClick.addEventListener('click', () => setVideoMode(true));
 
     /* ==========================================================
-       6b. Background Play Mode (Media Session + visibility handling)
+       6b. Background Play Mode (Silent Audio Loop + Media Session)
        ========================================================== */
     let bgMode = localStorage.getItem('lumina_bgmode') === '1';
+
+    // Silent Audio Keep-Alive for iOS Safari & Mobile Browsers
+    // A valid minimal base64 silent WAV audio file (0.5s loop)
+    const SILENT_WAV_BASE64 = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+    let silentAudioElement = null;
+
+    function initSilentAudio() {
+      if (!silentAudioElement) {
+        silentAudioElement = new Audio(SILENT_WAV_BASE64);
+        silentAudioElement.loop = true;
+        silentAudioElement.volume = 0.01; // extremely low volume to keep audio pipeline active
+        silentAudioElement.setAttribute('playsinline', 'true');
+      }
+    }
+
+    function startSilentAudio() {
+      initSilentAudio();
+      if (silentAudioElement && silentAudioElement.paused) {
+        silentAudioElement.play().catch(e => {
+          // Requires user interaction once
+          console.log('Silent audio waiting for interaction:', e);
+        });
+      }
+    }
+
+    function stopSilentAudio() {
+      if (silentAudioElement && !silentAudioElement.paused) {
+        silentAudioElement.pause();
+      }
+    }
 
     function updateMediaSessionMetadata() {
       if (!('mediaSession' in navigator)) return;
@@ -994,13 +1030,16 @@
     }
 
     function setupMediaSession() {
-      if (!('mediaSession' in navigator)) {
-        showToast('Trình duyệt không hỗ trợ Media Session — vẫn phát nền cơ bản');
-        return;
-      }
+      if (!('mediaSession' in navigator)) return;
       updateMediaSessionMetadata();
-      navigator.mediaSession.setActionHandler('play', () => { if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo(); });
-      navigator.mediaSession.setActionHandler('pause', () => { if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); });
+      navigator.mediaSession.setActionHandler('play', () => { 
+        startSilentAudio();
+        if (ytPlayer && ytPlayer.playVideo) ytPlayer.playVideo(); 
+      });
+      navigator.mediaSession.setActionHandler('pause', () => { 
+        stopSilentAudio();
+        if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); 
+      });
       navigator.mediaSession.setActionHandler('previoustrack', () => playPrevious());
       navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
       navigator.mediaSession.setActionHandler('seekto', (details) => {
@@ -1017,9 +1056,10 @@
         bgModeBtn.classList.remove('text-slate-300');
         bgModeLabel.textContent = 'Đang chạy nền';
         setupMediaSession();
+        if (isPlaying) startSilentAudio();
         const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         if (isIOS) {
-          showToast('iOS Safari: YouTube embed không chạy nền được — hãy dùng YouTube app (Premium)');
+          showToast('Đã bật chạy nền cho iOS (Khóa màn hình -> Bấm Play ở Control Center nếu bị khựng)');
         } else {
           showToast('Đã bật chế độ chạy nền');
         }
@@ -1027,6 +1067,7 @@
         bgModeBtn.classList.remove('bg-brand-500/20', 'border-brand-500/40', 'text-brand-400');
         bgModeBtn.classList.add('text-slate-300');
         bgModeLabel.textContent = 'Chạy nền';
+        stopSilentAudio();
         if ('mediaSession' in navigator) {
           navigator.mediaSession.metadata = null;
           syncMediaSessionState('none');
@@ -1039,11 +1080,19 @@
     // Khi quay lại tab sau khi ẩn: nếu đang phát mà bị dừng thì phát lại
     document.addEventListener('visibilitychange', () => {
       if (!bgMode) return;
-      if (document.hidden) return;
-      if (ytPlayer && ytPlayer.getPlayerState && ytPlayer.getPlayerState() === 2) {
+      if (document.hidden) {
+        // Tab bị ẩn / khóa màn hình: nếu đang phát, duy trì silent audio
+        if (isPlaying) startSilentAudio();
+        return;
+      }
+      // Tab hiện lại
+      if (ytPlayer && ytPlayer.getPlayerState && ytPlayer.getPlayerState() === 2 && isPlaying) {
         ytPlayer.playVideo();
       }
-      if (isPlaying) setupMediaSession();
+      if (isPlaying) {
+        startSilentAudio();
+        setupMediaSession();
+      }
     });
 
     bgModeBtn.addEventListener('click', () => setBackgroundMode(!bgMode));
