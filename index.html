@@ -109,6 +109,23 @@
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.07);
     }
+
+    /* Short viewport height optimization for 1-screen auto-fit */
+    @media (max-height: 720px) {
+      .player-disc-box {
+        max-height: 28vh !important;
+        max-width: 28vh !important;
+      }
+      .player-disc-group {
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.25rem !important;
+      }
+      #waveVisualizer {
+        height: 1.75rem !important;
+        margin-top: 0.25rem !important;
+        margin-bottom: 0.25rem !important;
+      }
+    }
   </style>
 </head>
 <body class="bg-[#0a0a0e] text-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col select-none" style="height: 100dvh;">
@@ -126,23 +143,30 @@
       </div>
     </div>
 
-    <!-- Quick Add Song Form -->
-    <div class="flex-1 min-w-0 max-w-xl mx-2 sm:mx-4">
+    <!-- Quick Add Song & Search Form -->
+    <div class="flex-1 min-w-0 max-w-xl mx-2 sm:mx-4 relative" id="searchContainer">
       <form id="addSongForm" class="relative flex items-center">
-        <i data-lucide="plus-circle" class="absolute left-3.5 w-4 h-4 text-slate-400"></i>
+        <i data-lucide="search" class="absolute left-3.5 w-4 h-4 text-slate-400"></i>
         <input 
           type="text" 
           id="ytInput"
-          placeholder="Dán link YouTube (https://youtu.be/...) hoặc Video ID để thêm..." 
+          autocomplete="off"
+          placeholder="Tìm bài hát, ca sĩ hoặc dán link YouTube..." 
           class="w-full bg-[#12121a] hover:bg-[#181824] focus:bg-[#1a1a28] text-sm text-slate-200 placeholder-slate-500 pl-10 pr-24 py-2 rounded-full border border-surface-border focus:border-brand-500 focus:outline-none transition-all shadow-inner"
         >
         <button 
           type="submit" 
+          id="searchSubmitBtn"
           class="absolute right-1.5 px-3 py-1 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white text-xs font-semibold rounded-full transition-all shadow-sm flex items-center gap-1"
         >
-          <span>Thêm</span>
+          <span id="searchBtnText">Tìm / Thêm</span>
         </button>
       </form>
+
+      <!-- Floating Search Results Dropdown -->
+      <div id="searchDropdown" class="hidden absolute left-0 right-0 top-full mt-2 bg-[#14141e]/98 backdrop-blur-xl border border-surface-border rounded-2xl shadow-2xl p-2 z-50 max-h-[70vh] overflow-y-auto space-y-1">
+        <!-- Search results injected here -->
+      </div>
     </div>
 
     <!-- Right Actions / Mode toggle -->
@@ -175,67 +199,67 @@
   <main class="flex-1 flex overflow-hidden relative">
 
     <!-- Center Stage: Player & Visualizer -->
-    <section class="flex-1 min-h-0 flex flex-col justify-between p-3 sm:p-4 lg:p-8 overflow-y-auto relative">
+    <section class="flex-1 min-h-0 flex flex-col justify-between p-2 sm:p-4 lg:p-6 overflow-hidden relative">
       <!-- Glow ambient background -->
-      <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-brand-500/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 sm:w-96 sm:h-96 bg-brand-500/10 rounded-full blur-[100px] pointer-events-none"></div>
 
       <!-- Main Playback Presentation -->
-      <div class="w-full max-w-4xl mx-auto flex-1 min-h-0 flex flex-col items-center justify-center my-auto z-10">
+      <div class="w-full max-w-3xl mx-auto flex-1 min-h-0 flex flex-col items-center justify-center my-auto z-10 py-1">
 
         <!-- Mode A: Audio Art + Visualizer Mode (Default) -->
-        <div id="visualizerContainer" class="flex flex-col items-center w-full max-w-md transition-all duration-500">
+        <div id="visualizerContainer" class="flex flex-col items-center w-full max-w-md transition-all duration-300">
           <!-- Album art disc with glow -->
-          <div class="relative group my-4">
-            <div id="glowBackdrop" class="absolute inset-0 bg-brand-500/20 rounded-full blur-2xl group-hover:bg-brand-500/30 transition-all duration-700 animate-pulse-glow"></div>
+          <div class="relative group my-2 sm:my-3 player-disc-group">
+            <div id="glowBackdrop" class="absolute inset-0 bg-brand-500/20 rounded-full blur-xl group-hover:bg-brand-500/30 transition-all duration-700 animate-pulse-glow"></div>
             
-            <div class="relative w-40 h-40 sm:w-64 sm:h-64 lg:w-72 lg:h-72 rounded-3xl overflow-hidden shadow-2xl border border-white/10 p-2 bg-surface-card">
+            <div class="player-disc-box relative w-36 h-36 sm:w-44 sm:h-44 md:w-52 md:h-52 lg:w-60 lg:h-60 max-h-[38vh] max-w-[38vh] aspect-square rounded-3xl overflow-hidden shadow-2xl border border-white/10 p-2 bg-surface-card">
               <img 
                 id="currentThumbnail" 
-                src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=600&auto=format&fit=crop&q=80" 
+                src="https://img.youtube.com/vi/abPmZCZZrFA/hqdefault.jpg" 
                 alt="Track art"
                 class="w-full h-full object-cover rounded-2xl transform transition-transform duration-700 group-hover:scale-105"
                 onerror="this.src='https://placehold.co/400x400/16161e/f43f5e?text=Music'"
               >
               <!-- Disc center vinyl badge -->
-              <div class="absolute inset-0 m-auto w-12 h-12 bg-black/70 backdrop-blur-md rounded-full border border-white/20 flex items-center justify-center">
-                <div class="w-3.5 h-3.5 rounded-full bg-brand-500 animate-ping"></div>
+              <div class="absolute inset-0 m-auto w-10 h-10 sm:w-12 sm:h-12 bg-black/75 backdrop-blur-md rounded-full border border-white/20 flex items-center justify-center">
+                <div class="w-3 h-3 rounded-full bg-brand-500 animate-ping"></div>
               </div>
             </div>
           </div>
 
           <!-- Dynamic Soundwave Visualizer Bars -->
-          <div class="w-full h-12 sm:h-16 flex items-end justify-center gap-1.5 px-4 my-2" id="waveVisualizer">
+          <div class="w-full h-8 sm:h-11 flex items-end justify-center gap-1 sm:gap-1.5 px-4 my-1 sm:my-2" id="waveVisualizer">
             <!-- Dynamically generated visual bars -->
           </div>
 
           <!-- Track Info -->
-          <div class="text-center mt-3 max-w-full">
-            <h1 id="currentTitle" class="font-display font-bold text-xl sm:text-2xl text-white tracking-tight truncate px-2">Đang tải bài hát...</h1>
-            <p id="currentArtist" class="text-sm font-medium text-slate-400 mt-1 truncate">Lumina Music Player</p>
+          <div class="text-center mt-1 sm:mt-2 max-w-full px-2">
+            <h1 id="currentTitle" class="font-display font-bold text-lg sm:text-xl lg:text-2xl text-white tracking-tight truncate">Đang tải bài hát...</h1>
+            <p id="currentArtist" class="text-xs sm:text-sm font-medium text-slate-400 mt-0.5 truncate">Lumina Music Player</p>
           </div>
         </div>
 
         <!-- Mode B: YouTube Video Frame Container -->
-        <div id="ytVideoWrapper" class="hidden w-full max-w-3xl aspect-video bg-black rounded-2xl overflow-hidden border border-surface-border shadow-2xl relative my-auto">
+        <div id="ytVideoWrapper" class="hidden w-full max-w-2xl aspect-video max-h-[50vh] bg-black rounded-2xl overflow-hidden border border-surface-border shadow-2xl relative my-auto">
           <!-- The YouTube Iframe is mounted inside #ytplayer -->
           <div id="ytplayer" class="w-full h-full pointer-events-auto"></div>
-          <button id="minimizeVideoBtn" class="absolute top-3 right-3 bg-black/60 hover:bg-black/90 text-white p-2 rounded-full backdrop-blur-md border border-white/10 transition-all text-xs flex items-center gap-1.5">
-            <i data-lucide="minimize-2" class="w-4 h-4"></i>
-            <span>Thu nhỏ video</span>
+          <button id="minimizeVideoBtn" class="absolute top-2.5 right-2.5 bg-black/60 hover:bg-black/90 text-white px-2 py-1.5 rounded-full backdrop-blur-md border border-white/10 transition-all text-xs flex items-center gap-1.5">
+            <i data-lucide="minimize-2" class="w-3.5 h-3.5"></i>
+            <span class="text-[11px]">Thu nhỏ</span>
           </button>
         </div>
 
       </div>
 
       <!-- Quick status indicator bar -->
-      <div class="w-full max-w-4xl mx-auto flex items-center justify-between text-xs text-slate-400 py-2 border-t border-surface-border/50 shrink-0">
+      <div class="w-full max-w-3xl mx-auto flex items-center justify-between text-xs text-slate-400 py-1.5 border-t border-surface-border/50 shrink-0">
         <div class="flex items-center gap-2">
           <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span id="playerStateText">Sẵn sàng phát nhạc</span>
+          <span id="playerStateText" class="truncate max-w-[200px] sm:max-w-none">Sẵn sàng phát nhạc</span>
         </div>
-        <div class="flex items-center gap-4">
-          <span id="queueCountIndicator">0 bài trong danh sách</span>
-          <button id="toggleQueueDrawerBtn" class="lg:hidden text-brand-400 hover:text-brand-300 font-semibold flex items-center gap-1">
+        <div class="flex items-center gap-3">
+          <span id="queueCountIndicator">0 bài</span>
+          <button id="toggleQueueDrawerBtn" class="lg:hidden text-brand-400 hover:text-brand-300 font-semibold flex items-center gap-1 text-xs">
             <i data-lucide="list-music" class="w-3.5 h-3.5"></i> Danh sách
           </button>
         </div>
@@ -245,13 +269,13 @@
     <!-- Right Sidebar: Queue / Curated Playlist -->
     <aside id="queueSidebar" class="fixed inset-y-0 right-0 w-80 lg:w-96 bg-surface-card/95 backdrop-blur-xl border-l border-surface-border flex flex-col z-30 transition-transform duration-300 translate-x-full lg:translate-x-0 lg:static">
       <!-- Sidebar Header -->
-      <div class="p-4 border-b border-surface-border flex items-center justify-between">
+      <div class="p-3.5 border-b border-surface-border flex items-center justify-between shrink-0">
         <div class="flex items-center gap-2">
           <i data-lucide="list-music" class="w-5 h-5 text-brand-500"></i>
-          <h2 class="font-display font-bold text-base text-white">Danh sách phát & Hàng đợi</h2>
+          <h2 class="font-display font-bold text-sm sm:text-base text-white">Top Hit & Hàng đợi</h2>
         </div>
         <div class="flex items-center gap-1.5">
-          <button id="resetPlaylistBtn" title="Khôi phục danh sách mặc định" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated transition-colors">
+          <button id="resetPlaylistBtn" title="Khôi phục danh sách Top Hit mặc định" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated transition-colors">
             <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
           </button>
           <button id="closeQueueBtn" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-surface-elevated">
@@ -261,10 +285,11 @@
       </div>
 
       <!-- Playlist Selection Tabs -->
-      <div class="px-4 pt-3 flex gap-2 overflow-x-auto text-xs pb-1 shrink-0">
-        <button class="px-3 py-1.5 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30 font-medium">Tất cả</button>
-        <button id="filterLofi" class="px-3 py-1.5 rounded-full bg-surface-elevated hover:bg-[#252535] text-slate-400 font-medium transition-colors">Lofi Chill</button>
-        <button id="filterAcoustic" class="px-3 py-1.5 rounded-full bg-surface-elevated hover:bg-[#252535] text-slate-400 font-medium transition-colors">Acoustic & Pop</button>
+      <div class="px-3 sm:px-4 pt-2.5 flex gap-1.5 overflow-x-auto text-xs pb-1.5 shrink-0" id="tabGroup">
+        <button id="filterAll" class="tab-btn px-2.5 py-1 rounded-full bg-brand-500 text-white font-semibold text-[11px] whitespace-nowrap">Tất cả</button>
+        <button id="filterVpop" class="tab-btn px-2.5 py-1 rounded-full bg-surface-elevated hover:bg-[#252535] text-slate-400 font-medium text-[11px] whitespace-nowrap transition-colors">Top V-Pop</button>
+        <button id="filterGlobal" class="tab-btn px-2.5 py-1 rounded-full bg-surface-elevated hover:bg-[#252535] text-slate-400 font-medium text-[11px] whitespace-nowrap transition-colors">Global Hits</button>
+        <button id="filterLofi" class="tab-btn px-2.5 py-1 rounded-full bg-surface-elevated hover:bg-[#252535] text-slate-400 font-medium text-[11px] whitespace-nowrap transition-colors">Lofi Chill</button>
       </div>
 
       <!-- Songs Queue List -->
@@ -376,51 +401,119 @@
        ========================================================== */
     const DEFAULT_PLAYLIST = [
       {
+        id: 'abPmZCZZrFA',
+        title: 'Đừng Làm Trái Tim Anh Đau',
+        artist: 'Sơn Tùng M-TP',
+        category: 'vpop',
+        thumbnail: 'https://img.youtube.com/vi/abPmZCZZrFA/hqdefault.jpg'
+      },
+      {
+        id: 'ekr2nIex040',
+        title: 'APT.',
+        artist: 'ROSÉ & Bruno Mars',
+        category: 'global',
+        thumbnail: 'https://img.youtube.com/vi/ekr2nIex040/hqdefault.jpg'
+      },
+      {
+        id: 'kPa7bsKwL-c',
+        title: 'Die With A Smile',
+        artist: 'Lady Gaga & Bruno Mars',
+        category: 'global',
+        thumbnail: 'https://img.youtube.com/vi/kPa7bsKwL-c/hqdefault.jpg'
+      },
+      {
+        id: 'GpmOn4RyzZI',
+        title: 'Cắt Đôi Nỗi Sầu',
+        artist: 'Tăng Duy Tân',
+        category: 'vpop',
+        thumbnail: 'https://img.youtube.com/vi/GpmOn4RyzZI/hqdefault.jpg'
+      },
+      {
+        id: 'xypzmu5mMPY',
+        title: 'Muộn Rồi Mà Sao Còn',
+        artist: 'Sơn Tùng M-TP',
+        category: 'vpop',
+        thumbnail: 'https://img.youtube.com/vi/xypzmu5mMPY/hqdefault.jpg'
+      },
+      {
+        id: 'eVli-tstM5E',
+        title: 'Espresso',
+        artist: 'Sabrina Carpenter',
+        category: 'global',
+        thumbnail: 'https://img.youtube.com/vi/eVli-tstM5E/hqdefault.jpg'
+      },
+      {
+        id: 'i4qZmKSFYvI',
+        title: 'Từng Là',
+        artist: 'Vũ Cát Tường',
+        category: 'vpop',
+        thumbnail: 'https://img.youtube.com/vi/i4qZmKSFYvI/hqdefault.jpg'
+      },
+      {
+        id: 'kSvxU8R77RU',
+        title: 'Đi Giữa Trời Rực Rỡ',
+        artist: 'Ngô Lan Hương',
+        category: 'vpop',
+        thumbnail: 'https://img.youtube.com/vi/kSvxU8R77RU/hqdefault.jpg'
+      },
+      {
+        id: '2Vv-BfVoq4g',
+        title: 'Perfect (Official Video)',
+        artist: 'Ed Sheeran',
+        category: 'global',
+        thumbnail: 'https://img.youtube.com/vi/2Vv-BfVoq4g/hqdefault.jpg'
+      },
+      {
+        id: 'JGwWNGJdvx8',
+        title: 'Shape of You (Official Video)',
+        artist: 'Ed Sheeran',
+        category: 'global',
+        thumbnail: 'https://img.youtube.com/vi/JGwWNGJdvx8/hqdefault.jpg'
+      },
+      {
         id: 'jfKfPfyJRdk',
         title: 'lofi hip hop radio 📚 beats to relax/study to',
         artist: 'Lofi Girl',
         category: 'lofi',
-        thumbnail: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?w=500&auto=format&fit=crop&q=80'
+        thumbnail: 'https://img.youtube.com/vi/jfKfPfyJRdk/hqdefault.jpg'
       },
       {
         id: '5yx6BWlEVcY',
         title: 'Chillhop Radio - jazzy & lofi hip hop beats',
         artist: 'Chillhop Music',
         category: 'lofi',
-        thumbnail: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80'
+        thumbnail: 'https://img.youtube.com/vi/5yx6BWlEVcY/hqdefault.jpg'
       },
       {
         id: '7NOSDKb0HlU',
         title: 'Coffee Shop Acoustic Guitar ☕ Mộc Mạc & Ấm Áp',
         artist: 'Acoustic Morning Vibes',
-        category: 'acoustic',
-        thumbnail: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=500&auto=format&fit=crop&q=80'
-      },
-      {
-        id: 'kOCkne-Bku4',
-        title: 'Night Sky Relaxing Piano & Rain Ambience',
-        artist: 'Quiet Nights',
         category: 'lofi',
-        thumbnail: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=500&auto=format&fit=crop&q=80'
-      },
-      {
-        id: '2Vv-BfVoq4g',
-        title: 'Perfect - Ed Sheeran (Official Music Video)',
-        artist: 'Ed Sheeran',
-        category: 'acoustic',
-        thumbnail: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&auto=format&fit=crop&q=80'
-      },
-      {
-        id: 'JGwWNGJdvx8',
-        title: 'Shape of You - Acoustic Melodic Version',
-        artist: 'Pop Acoustic Session',
-        category: 'acoustic',
-        thumbnail: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=500&auto=format&fit=crop&q=80'
+        thumbnail: 'https://img.youtube.com/vi/7NOSDKb0HlU/hqdefault.jpg'
       }
     ];
 
+    // Persist playlist to localStorage
+    function loadSavedPlaylist() {
+      try {
+        const saved = localStorage.getItem('lumina_playlist_v3');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+      return [...DEFAULT_PLAYLIST];
+    }
+
+    function savePlaylist() {
+      try {
+        localStorage.setItem('lumina_playlist_v3', JSON.stringify(playlist));
+      } catch (e) {}
+    }
+
     // App State
-    let playlist = [...DEFAULT_PLAYLIST];
+    let playlist = loadSavedPlaylist();
+    let currentFilter = 'all';
     let currentIndex = 0;
     let isPlaying = false;
     let isShuffle = false;
@@ -481,6 +574,10 @@
     const resetPlaylistBtn = document.getElementById('resetPlaylistBtn');
     const addSongForm = document.getElementById('addSongForm');
     const ytInput = document.getElementById('ytInput');
+    const searchContainer = document.getElementById('searchContainer');
+    const searchDropdown = document.getElementById('searchDropdown');
+    const searchSubmitBtn = document.getElementById('searchSubmitBtn');
+    const searchBtnText = document.getElementById('searchBtnText');
     const toast = document.getElementById('toast');
     const toastMsg = document.getElementById('toastMsg');
     const likeBtn = document.getElementById('likeBtn');
@@ -488,12 +585,12 @@
     /* ==========================================================
        2. Initialize Soundwave Bars
        ========================================================== */
-    const BAR_COUNT = 32;
+    const BAR_COUNT = 24;
     function initWaveVisualizer() {
       waveVisualizer.innerHTML = '';
       for (let i = 0; i < BAR_COUNT; i++) {
         const bar = document.createElement('div');
-        bar.className = 'w-1 sm:w-1.5 bg-gradient-to-t from-brand-600 via-rose-500 to-amber-300 rounded-full audio-bar opacity-80';
+        bar.className = 'w-1 sm:w-1 bg-gradient-to-t from-brand-600 via-rose-500 to-amber-300 rounded-full audio-bar opacity-80';
         bar.style.height = '6px';
         waveVisualizer.appendChild(bar);
       }
@@ -511,7 +608,7 @@
           // Dynamic wave shape calculation with rhythmic bounce
           const time = Date.now() / 150;
           const factor = Math.sin(time + i * 0.35) * 0.5 + 0.5;
-          const randomH = Math.floor(factor * 42 + Math.random() * 16 + 6);
+          const randomH = Math.floor(factor * 24 + Math.random() * 10 + 4);
           bars[i].style.height = `${randomH}px`;
         }
       }, 90);
@@ -570,11 +667,12 @@
         if (bgMode) syncMediaSessionState('playing');
         // Auto update video title if available from YouTube player
         const videoData = ytPlayer.getVideoData();
-        if (videoData && videoData.title && playlist[currentIndex].title.startsWith('YouTube Song')) {
+        if (videoData && videoData.title && (playlist[currentIndex].title.startsWith('YouTube Song') || playlist[currentIndex].title.startsWith('Đang lấy tên'))) {
           playlist[currentIndex].title = videoData.title;
           playlist[currentIndex].artist = videoData.author || 'YouTube';
+          savePlaylist();
           updateTrackDisplay();
-          renderPlaylist();
+          renderPlaylist(currentFilter);
         }
       } else if (event.data === YT.PlayerState.PAUSED) {
         isPlaying = false;
@@ -969,11 +1067,12 @@
        7. Playlist Rendering and Queue Management
        ========================================================== */
     function renderPlaylist(filterCategory = null) {
+      if (filterCategory !== null) currentFilter = filterCategory;
       playlistContainer.innerHTML = '';
 
       let listToRender = playlist;
-      if (filterCategory) {
-        listToRender = playlist.filter(track => track.category === filterCategory);
+      if (currentFilter && currentFilter !== 'all') {
+        listToRender = playlist.filter(track => track.category === currentFilter);
       }
 
       if (listToRender.length === 0) {
@@ -1052,6 +1151,7 @@
 
       const isDeletingCurrent = index === currentIndex;
       const deletedTrack = playlist.splice(index, 1)[0];
+      savePlaylist();
 
       if (isDeletingCurrent) {
         currentIndex = index >= playlist.length ? 0 : index;
@@ -1060,7 +1160,7 @@
         currentIndex--;
       }
 
-      renderPlaylist();
+      renderPlaylist(currentFilter);
       showToast(`Đã xóa "${deletedTrack.title.substring(0, 24)}..."`);
     }
 
@@ -1082,40 +1182,218 @@
       return match ? match[1] : null;
     }
 
+    function addTrackToPlaylist(track, playNow = true) {
+      // Check if already in list
+      const existing = playlist.findIndex(item => item.id === track.id);
+      if (existing !== -1) {
+        showToast('Bài hát đã có trong danh sách!');
+        if (playNow) playTrackAtIndex(existing);
+        return;
+      }
+
+      if (playNow) {
+        playlist.unshift(track);
+        savePlaylist();
+        currentIndex = 0;
+        playTrackAtIndex(0);
+        updateTabStyles('filterAll');
+        renderPlaylist('all');
+        showToast(`Đang phát: "${track.title.substring(0, 24)}..."`);
+      } else {
+        playlist.push(track);
+        savePlaylist();
+        renderPlaylist(currentFilter);
+        showToast(`Đã thêm vào hàng đợi: "${track.title.substring(0, 24)}..."`);
+      }
+      queueCountIndicator.textContent = `${playlist.length} bài`;
+    }
+
+    // Public Invidious instances fallback list for YouTube search
+    const SEARCH_INSTANCES = [
+      'https://yt.chocolatemoo53.com',
+      'https://invidious.jing.rocks',
+      'https://inv.vern.cc'
+    ];
+
+    async function searchYouTube(query) {
+      searchDropdown.classList.remove('hidden');
+      searchDropdown.innerHTML = `
+        <div class="p-6 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+          <div class="w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+          <span>Đang tìm kiếm YouTube: "<strong class="text-white">${query}</strong>"...</span>
+        </div>
+      `;
+
+      let results = null;
+
+      for (const instance of SEARCH_INSTANCES) {
+        try {
+          const res = await fetch(`${instance}/api/v1/search?q=${encodeURIComponent(query)}&type=video`, {
+            signal: AbortSignal.timeout(5000)
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) {
+              results = data
+                .filter(x => x.videoId && x.title)
+                .slice(0, 6)
+                .map(x => ({
+                  id: x.videoId,
+                  title: x.title,
+                  artist: x.author || 'YouTube',
+                  category: 'search',
+                  thumbnail: `https://img.youtube.com/vi/${x.videoId}/hqdefault.jpg`,
+                  duration: x.lengthSeconds ? formatTime(x.lengthSeconds) : ''
+                }));
+              if (results.length > 0) break;
+            }
+          }
+        } catch (e) {
+          console.warn(`Search failed on ${instance}:`, e);
+        }
+      }
+
+      if (!results || results.length === 0) {
+        searchDropdown.innerHTML = `
+          <div class="p-5 text-center text-slate-400 text-xs">
+            <i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2 text-amber-400 opacity-80"></i>
+            <p class="font-medium text-slate-200">Không tìm thấy kết quả hoặc máy chủ tìm kiếm đang bận.</p>
+            <p class="text-[11px] text-slate-500 mt-1">Mẹo: Bạn có thể dán trực tiếp link bài hát từ YouTube để nghe ngay!</p>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      renderSearchResults(results, query);
+    }
+
+    function renderSearchResults(results, query) {
+      searchDropdown.innerHTML = `
+        <div class="px-3 py-1.5 text-[11px] font-semibold text-slate-400 border-b border-surface-border flex items-center justify-between">
+          <span>KẾT QUẢ TÌM KIẾM CHO "${query.toUpperCase()}"</span>
+          <button id="closeSearchDropdown" class="text-slate-400 hover:text-white p-1 rounded-md">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+        <div class="space-y-1 p-1 max-h-[60vh] overflow-y-auto" id="searchResultsList"></div>
+      `;
+
+      const listContainer = document.getElementById('searchResultsList');
+
+      results.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'group flex items-center justify-between p-2 rounded-xl hover:bg-surface-elevated/80 transition-all text-slate-200 cursor-pointer border border-transparent hover:border-white/5';
+        
+        row.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0 flex-1 pr-2">
+            <div class="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-black/40">
+              <img src="${item.thumbnail}" alt="${item.title}" class="w-full h-full object-cover">
+              ${item.duration ? `<span class="absolute bottom-0.5 right-0.5 px-1 bg-black/80 text-[9px] rounded font-mono text-white">${item.duration}</span>` : ''}
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-semibold text-white truncate group-hover:text-brand-400 transition-colors">${item.title}</p>
+              <p class="text-[11px] text-slate-400 truncate mt-0.5">${item.artist}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 shrink-0">
+            <button class="play-now-btn px-2.5 py-1 rounded-full bg-brand-500 hover:bg-brand-600 active:scale-95 text-white text-[11px] font-medium transition-all shadow-sm flex items-center gap-1">
+              <i data-lucide="play" class="w-3 h-3 fill-current"></i>
+              <span>Phát</span>
+            </button>
+            <button class="queue-btn p-1.5 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors" title="Thêm vào hàng đợi">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+
+        // Click row or "Phát" to play immediately
+        row.addEventListener('click', (e) => {
+          if (e.target.closest('.queue-btn')) return;
+          addTrackToPlaylist(item, true);
+          searchDropdown.classList.add('hidden');
+          ytInput.value = '';
+        });
+
+        // Click "+" to add to queue only
+        const queueBtn = row.querySelector('.queue-btn');
+        queueBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          addTrackToPlaylist(item, false);
+          queueBtn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>';
+          lucide.createIcons();
+        });
+
+        listContainer.appendChild(row);
+      });
+
+      document.getElementById('closeSearchDropdown').addEventListener('click', (e) => {
+        e.stopPropagation();
+        searchDropdown.classList.add('hidden');
+      });
+
+      lucide.createIcons();
+    }
+
     addSongForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const rawInput = ytInput.value.trim();
+      if (!rawInput) return;
+
       const videoId = extractYouTubeId(rawInput);
 
-      if (!videoId) {
-        showToast('Link hoặc Video ID không hợp lệ!');
-        return;
-      }
+      if (videoId) {
+        // Direct YouTube Link or ID
+        searchDropdown.classList.add('hidden');
+        const existing = playlist.findIndex(item => item.id === videoId);
+        if (existing !== -1) {
+          showToast('Bài hát này đã có trong danh sách! Đang mở bài...');
+          playTrackAtIndex(existing);
+          ytInput.value = '';
+          return;
+        }
 
-      // Check if already in list
-      const existing = playlist.findIndex(item => item.id === videoId);
-      if (existing !== -1) {
-        showToast('Bài hát này đã có trong danh sách! Đang mở bài...');
-        playTrackAtIndex(existing);
+        const newTrack = {
+          id: videoId,
+          title: `Đang lấy tên [${videoId}]...`,
+          artist: 'YouTube',
+          category: 'custom',
+          thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+        };
+
+        addTrackToPlaylist(newTrack, true);
         ytInput.value = '';
-        return;
+
+        // Fetch oEmbed title & artist asynchronously
+        fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.title) {
+              newTrack.title = data.title;
+              newTrack.artist = data.author_name || 'YouTube';
+              savePlaylist();
+              updateTrackDisplay();
+              renderPlaylist(currentFilter);
+            }
+          })
+          .catch(() => {});
+      } else {
+        // Keyword Search
+        searchYouTube(rawInput);
       }
+    });
 
-      // Create new track object
-      const newTrack = {
-        id: videoId,
-        title: `YouTube Song [${videoId}]`,
-        artist: 'Đang nạp thông tin...',
-        category: 'custom',
-        thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-      };
+    // Close search dropdown on click outside or Escape
+    document.addEventListener('click', (e) => {
+      if (!searchContainer.contains(e.target)) {
+        searchDropdown.classList.add('hidden');
+      }
+    });
 
-      // Push and play immediately
-      playlist.push(newTrack);
-      ytInput.value = '';
-      const newIndex = playlist.length - 1;
-      playTrackAtIndex(newIndex);
-      showToast('Đã thêm bài hát mới vào danh sách!');
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        searchDropdown.classList.add('hidden');
+      }
     });
 
     /* ==========================================================
@@ -1125,17 +1403,45 @@
     nextBtn.addEventListener('click', playNext);
     prevBtn.addEventListener('click', playPrevious);
 
-    // Filter Buttons
-    document.getElementById('filterLofi').addEventListener('click', () => renderPlaylist('lofi'));
-    document.getElementById('filterAcoustic').addEventListener('click', () => renderPlaylist('acoustic'));
-    document.querySelector('#queueSidebar .flex.gap-2 button:first-child').addEventListener('click', () => renderPlaylist());
+    // Filter Tabs
+    function updateTabStyles(activeTabId) {
+      document.querySelectorAll('#tabGroup .tab-btn').forEach(btn => {
+        if (btn.id === activeTabId) {
+          btn.className = 'tab-btn px-2.5 py-1 rounded-full bg-brand-500 text-white font-semibold text-[11px] shadow-sm whitespace-nowrap';
+        } else {
+          btn.className = 'tab-btn px-2.5 py-1 rounded-full bg-surface-elevated hover:bg-[#252535] text-slate-400 font-medium text-[11px] whitespace-nowrap transition-colors';
+        }
+      });
+    }
+
+    document.getElementById('filterAll').addEventListener('click', () => {
+      updateTabStyles('filterAll');
+      renderPlaylist('all');
+    });
+    document.getElementById('filterVpop').addEventListener('click', () => {
+      updateTabStyles('filterVpop');
+      renderPlaylist('vpop');
+    });
+    document.getElementById('filterGlobal').addEventListener('click', () => {
+      updateTabStyles('filterGlobal');
+      renderPlaylist('global');
+    });
+    document.getElementById('filterLofi').addEventListener('click', () => {
+      updateTabStyles('filterLofi');
+      renderPlaylist('lofi');
+    });
 
     // Reset default playlist
     resetPlaylistBtn.addEventListener('click', () => {
       playlist = [...DEFAULT_PLAYLIST];
+      try {
+        localStorage.removeItem('lumina_playlist_v3');
+      } catch (e) {}
       currentIndex = 0;
       playTrackAtIndex(0);
-      showToast('Đã khôi phục danh sách mặc định');
+      updateTabStyles('filterAll');
+      renderPlaylist('all');
+      showToast('Đã khôi phục danh sách Top Hit mặc định');
     });
 
     // Mobile Drawer Open/Close
